@@ -1,0 +1,40 @@
+# python
+.venv/
+venv/
+*.egg-info/
+__pycache__/
+build/
+dist/
+
+# scraper
+.scrapy/
+data/
+*.log
+
+# database (keep for local, but consider excluding for cloud deployment)
+*.db
+*.db-journal
+news_scraper.db
+
+# exported files
+search_results_*.csv
+export_*.csv
+
+# tests
+outputs-*/
+.pytest_*/
+
+# dev
+demo.ipynb
+
+# remote-tests
+/bin/
+.env
+**/.env
+
+# Deployment files (optional - uncommit if deploying)
+# Procfile
+# runtime.txt
+# setup.sh
+# Dockerfile
+# docker-compose.yml
