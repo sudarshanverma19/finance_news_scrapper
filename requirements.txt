@@ -9,6 +9,9 @@ streamlit>=1.28.0
 plotly>=5.17.0
 sqlalchemy>=2.0.0
 
+# AI/ML dependencies
+google-generativeai>=0.3.0
+
 # Testing dependencies (optional)
 pytest>=7.4.0
 syrupy>=4.0.0

@@ -1,7 +1,7 @@
 [server]
 headless = true
 port = 8501
-enableCORS = false
+enableCORS = true
 enableXsrfProtection = true
 
 [browser]
@@ -16,5 +16,3 @@ font = "sans serif"
 
 [runner]
 magicEnabled = true
-installTracer = false
-fixMatplotlib = true

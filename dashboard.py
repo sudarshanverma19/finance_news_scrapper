@@ -12,6 +12,11 @@ import sys
 import subprocess
 import threading
 import time
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
@@ -34,6 +39,7 @@ from news_scraper.spiders import (
     ZeeNewsSpider,
     CnbcTv18Spider
 )
+from news_scraper import gemini_client
 
 # Page configuration
 st.set_page_config(
@@ -427,15 +433,60 @@ elif page == "🔍 Search":
         st.markdown(f"### Found {len(results)} results")
         
         if len(results) > 0:
-            # Export button
-            if st.button("📥 Export Results to CSV"):
-                export_path = f"search_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-                count = db.export_to_csv(
-                    export_path,
-                    spider_name=spider_name,
-                    search_query=search_query
-                )
-                st.success(f"Exported {count} results to {export_path}")
+            # Action buttons
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                # Export button
+                if st.button("📥 Export Results to CSV"):
+                    export_path = f"search_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+                    count = db.export_to_csv(
+                        export_path,
+                        spider_name=spider_name,
+                        search_query=search_query
+                    )
+                    st.success(f"Exported {count} results to {export_path}")
+            
+            with col2:
+                # Summarize button - only show if Gemini is configured
+                gemini_available = False
+                try:
+                    # Try to get API key from environment or Streamlit secrets
+                    import os
+                    api_key = os.getenv("GEMINI_API_KEY") or st.secrets.get("GEMINI_API_KEY", None)
+                    if api_key:
+                        os.environ["GEMINI_API_KEY"] = api_key
+                        gemini_available = True
+                except:
+                    pass
+                
+                if gemini_available and st.button("✨ Summarize Results with AI"):
+                    with st.spinner(f"🤖 Analyzing up to 8 articles about '{search_query}'... This may take 1-2 minutes due to API rate limits."):
+                        try:
+                            # Show a note about article content and rate limits
+                            st.info("💡 **Note:** Free tier has 10 requests/minute limit. Processing up to 8 articles with delays to avoid quota errors. For faster results, upgrade your Gemini API plan.")
+                            
+                            summary = gemini_client.summarize_multiple_articles(
+                                results,
+                                topic=search_query,
+                                max_articles=8  # Reduced from 20 to stay within free tier limits
+                            )
+                            
+                            st.success("✅ Summary generated!")
+                            st.markdown("---")
+                            st.markdown(f"### 📊 AI Summary: {search_query}")
+                            st.markdown(summary)
+                            st.markdown("---")
+                            
+                        except Exception as e:
+                            st.error(f"❌ Summarization failed: {str(e)}")
+                            if "quota" in str(e).lower() or "429" in str(e):
+                                st.warning("⏳ **Rate Limit Hit**: Please wait 60 seconds and try again. Free tier allows 10 requests per minute.")
+                                st.info("💡 **Tips to avoid rate limits:**\n- Search for more specific topics (fewer articles)\n- Wait a minute between summarizations\n- Consider upgrading your Gemini API plan for higher limits")
+                            else:
+                                st.info("💡 Make sure your GEMINI_API_KEY is set correctly in environment variables or Streamlit secrets.")
+                                st.info("💡 Also check that the scraped articles have full text content (not just titles).")
+
             
             st.markdown("---")
             

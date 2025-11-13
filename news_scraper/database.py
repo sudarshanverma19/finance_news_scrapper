@@ -46,6 +46,16 @@ class NewsDatabase:
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_created_at ON articles(created_at)")
         
         self.conn.commit()
+        # Add `summary` column if it does not exist (safe migration)
+        cursor.execute("PRAGMA table_info('articles')")
+        cols = [r[1] for r in cursor.fetchall()]
+        if 'summary' not in cols:
+            try:
+                cursor.execute("ALTER TABLE articles ADD COLUMN summary TEXT")
+                self.conn.commit()
+            except Exception:
+                # If alter fails (older SQLite), ignore - schema will work on fresh DB
+                pass
 
     def insert_article(self, article: Dict[str, Any], spider_name: str) -> bool:
         """Insert a single article into the database."""
@@ -223,6 +233,24 @@ class NewsDatabase:
                 writer.writerows(articles)
         
         return len(articles)
+
+    def update_summary(self, article_id: int, summary: str) -> bool:
+        """Update the summary field for a specific article id."""
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute("UPDATE articles SET summary = ? WHERE id = ?", (summary, article_id))
+            self.conn.commit()
+            return cursor.rowcount > 0
+        except Exception as e:
+            print(f"Error updating summary: {e}")
+            return False
+
+    def get_summary(self, article_id: int) -> Optional[str]:
+        """Retrieve summary for an article if present."""
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT summary FROM articles WHERE id = ?", (article_id,))
+        row = cursor.fetchone()
+        return row[0] if row else None
 
     def close(self):
         """Close database connection."""
